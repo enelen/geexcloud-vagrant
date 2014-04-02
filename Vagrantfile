@@ -5,7 +5,7 @@
 VAGRANTFILE_API_VERSION = "2"
 
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
-  config.vm.box = 'ubuntu'
+  config.vm.box = 'berendt/ubuntu-14.04-amd64'
   
   config.vm.define "puppet" do |puppet|
     puppet.vm.hostname = "puppet"
