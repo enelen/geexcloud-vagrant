@@ -60,6 +60,117 @@ keystone-manage db_sync
 
 service keystone restart
 
+wget https://raw.githubusercontent.com/enelen/geexcloud-vagrant/icehouse/keystone_basic.sh
+wget https://raw.githubusercontent.com/enelen/geexcloud-vagrant/icehouse/keystone_endpoints_basic.sh
+Then run:
+chmod +x keystone_basic.sh
+chmod +x keystone_endpoints_basic.sh
+
+./keystone_basic.sh
+./keystone_endpoints_basic.sh
+
+# Preliminary Keystone test
+curl http://10.10.1.2:35357/v2.0/endpoints -H 'x-auth-token: ADMIN' | python -m json.tool
+
+vim openrc 
+
+
+export OS_TENANT_NAME=admin
+export OS_USERNAME=admin
+export OS_PASSWORD=admin_pass
+export OS_AUTH_URL="http://10.10.1.2:5000/v2.0/"
+
+
+. openrc
+
+
+Install Glance
+
+apt-get install glance python-mysqldb
+
+3.1. Configure Glance API
+
+Edit glance-api.conf...
+
+vi /etc/glance/glance-api.conf
+[DEFAULT]
+bind_host = 0.0.0.0
+
+sql_connection = mysql://glanceUser:glancePass@10.10.1.2/glance
+registry_host = 10.10.1.2
+
+[keystone_authtoken]
+auth_host = 10.10.1.2
+auth_port = 35357
+auth_protocol = http
+admin_tenant_name = service
+admin_user = glance
+admin_password = service_pass
+
+[paste_deploy]
+flavor = keystone
+
+3.2. Configure Glance Registry
+
+Edit glance-registry.conf...
+
+vi /etc/glance/glance-registry.conf
+With:
+
+[DEFAULT]
+bind_host = 0.0.0.0
+
+sql_connection = mysql://glanceUser:glancePass@10.10.1.2/glance
+
+[keystone_authtoken]
+auth_host = 10.10.1.2
+auth_port = 35357
+auth_protocol = http
+admin_tenant_name = service
+admin_user = glance
+admin_password = service_pass
+
+[paste_deploy]
+flavor = keystone
+
+Then run:
+
+glance-manage db_sync
+chown glance.glance /var/lib/glance/images
+
+service glance-api restart; service glance-registry restart
+
+3.3. Download some O.S. Images ready for the Cloud environment
+glance image-create --location http://download.cirros-cloud.net/0.3.1/cirros-0.3.1-x86_64-disk.img --name "CirrOS Minimalist - 64-bit - Cloud Based Image" --is-public true --container-format bare --disk-format qcow2
+
+4. Install Nova
+apt-get install nova-api nova-cert nova-consoleauth nova-scheduler nova-conductor nova-novncproxy novnc
+
+4.1 Configure Nova
+cd /etc/nova
+Edit apt-paste.ini...
+cp api-paste.ini api-paste.ini.orig
+vi api-paste.ini
+With:
+
+[filter:authtoken]
+paste.filter_factory = keystoneclient.middleware.auth_token:filter_factory
+auth_host = controller.yourdomain.com
+auth_port = 35357
+auth_protocol = http
+admin_tenant_name = service
+admin_user = nova
+admin_password = service_pass
+# signing_dir is configurable, but the default behavior of the authtoken
+# middleware should be sufficient.  It will create a temporary directory
+# in the home directory for the user the nova process is running as.
+#signing_dir = /var/lib/nova/keystone-signing
+# Workaround for https://bugs.launchpad.net/nova/+bug/1154809
+auth_version = v2.0
+
+Then run:
+mv /etc/nova/nova.conf /etc/nova/nova.conf.orig
+
 
 Quantum
 
