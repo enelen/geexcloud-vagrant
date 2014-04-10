@@ -1,0 +1,70 @@
+Controller node
+
+1.  Update the system
+sudo su -
+apt-get update
+apt-get install vim
+apt-get dist-upgrade -y
+reboot
+
+2. Install OpenStack "base" dependecies
+
+apt-get install mysql-server python-mysqldb ntp curl openssl rabbitmq-server python-keyring
+
+Edit my.cnf...
+vi /etc/mysql/my.cnf
+
+bind-address		= 10.10.1.2
+collation-server = utf8_general_ci
+init-connect='SET NAMES utf8'
+character-set-server = utf8
+
+
+Creating the required databases:
+
+service mysql restart
+mysql -u root -p
+
+Once within MySQL prompt, create the databases:
+
+CREATE DATABASE keystone;
+GRANT ALL ON keystone.* TO 'keystoneUser'@'%' IDENTIFIED BY 'keystonePass';
+CREATE DATABASE glance;
+GRANT ALL ON glance.* TO 'glanceUser'@'%' IDENTIFIED BY 'glancePass';
+CREATE DATABASE nova;
+GRANT ALL ON nova.* TO 'novaUser'@'%' IDENTIFIED BY 'novaPass';
+CREATE DATABASE cinder;
+GRANT ALL ON cinder.* TO 'cinderUser'@'%' IDENTIFIED BY 'cinderPass';
+CREATE DATABASE neutron;
+GRANT ALL ON neutron.* TO 'neutronUser'@'%' IDENTIFIED BY 'neutronPass';
+CREATE DATABASE heat;
+GRANT ALL ON heat.* TO 'heatUser'@'%' IDENTIFIED BY 'heatPass';
+quit;
+
+2.1 Install keystone
+
+apt-get install keystone
+Edit the keystone.conf and and change it for this:
+
+vi /etc/keystone/keystone.conf
+File contents:
+
+[DEFAULT]
+admin_token = ADMIN
+
+connection = mysql://keystoneUser:keystonePass@10.10.1.2/keystone
+
+Then run:
+
+keystone-manage db_sync
+
+service keystone restart
+
+
+Quantum
+
+
+
+Compute
+
+
