@@ -170,9 +170,81 @@ auth_version = v2.0
 
 Then run:
 mv /etc/nova/nova.conf /etc/nova/nova.conf.orig
+wget https://raw.githubusercontent.com/enelen/geexcloud-vagrant/icehouse/nova.conf
+chown nova: /etc/nova/nova.conf
+
+chmod 640 /etc/nova/nova.conf
+nova-manage db sync
+
+cd /etc/init/; for i in $(ls nova-* |cut -d "." -f1); do sudo service $i restart; done
 
 
-Quantum
+
+Neutron-server on controller node
+Run:
+apt-get install neutron-server neutron-plugin-openvswitch-agent neutron
+5.1. Configure Neutron
+
+cd /etc/neutron/
+
+First, take a note of the "Service Tenant ID" with:
+
+keystone tenant-get service
+Edit neutron.conf...
+cp neutron.conf neutron.conf.orig
+vi /etc/neutron/neutron.conf
+With:
+
+[DEFAULT]
+state_path = /var/lib/neutron
+lock_path = $state_path/lock
+bind_host = 0.0.0.0
+core_plugin = neutron.plugins.ml2.plugin.Ml2Plugin
+auth_strategy = keystone
+allow_overlapping_ips = True
+rabbit_host = 10.10.1.2
+notification_driver = neutron.openstack.common.notifier.rpc_notifier
+nova_url = http://10.10.1.2:8774
+nova_region_name = RegionOne
+nova_admin_username = nova
+nova_admin_tenant_id = d4966c58d63e4290adaaba76746b2153 
+nova_admin_password = service_pass
+nova_admin_auth_url = http://10.10.1.2:35357/v2.0
+[quotas]
+[agent]
+root_helper = sudo /usr/bin/neutron-rootwrap /etc/neutron/rootwrap.conf
+[keystone_authtoken]
+auth_host = 10.10.1.2
+auth_port = 35357
+auth_protocol = http
+admin_tenant_name = service 
+admin_user = neutron
+admin_password = service_pass
+signing_dir = $state_path/keystone-signing
+[database]
+connection = mysql://neutronUser:neutronPass@10.10.1.2/neutron 
+[service_providers]
+service_provider=LOADBALANCER:Haproxy:neutron.services.loadbalancer.drivers.haproxy.plugin_driver.HaproxyOnHostPluginDriver:default
+service_provider=VPN:openswan:neutron.services.vpn.service_drivers.ipsec.IPsecVPNDriver:default
+
+
+cd plugins/ml2
+cp ml2_conf.ini ml2_conf.ini.orig
+Edit ml2_conf.ini...
+
+vi /etc/neutron/plugins/ml2/ml2_conf.ini
+[ml2]
+type_drivers = gre
+tenant_network_types = gre
+mechanism_drivers = openvswitch
+[ml2_type_flat]
+[ml2_type_vlan]
+[ml2_type_gre]
+tunnel_id_ranges = 1:1000
+[ml2_type_vxlan]
+[securitygroup]
+firewall_driver = neutron.agent.linux.iptables_firewall.OVSHybridIptablesFirewallDriver
+enable_security_group = True
 
 
 
