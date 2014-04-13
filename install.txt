@@ -248,6 +248,89 @@ enable_security_group = True
 
 
 
+
+Neutron Node
+
+sudo su -
+apt-get update
+apt-get dist-upgrade -y
+apt-get install vim
+reboot
+
+
+Edit /etc/sysctl.conf to contain the following:
+
+net.ipv4.ip_forward=1
+net.ipv4.conf.all.rp_filter=0
+net.ipv4.conf.default.rp_filter=0
+
+sysctl -p
+
+To install the Networking components
+
+apt-get install neutron-plugin-ml2 neutron-plugin-openvswitch-agent  neutron-l3-agent neutron-dhcp-agent bridge-utils
+
+
+cd /etc/neutron
+cp neutron.conf neutron.conf.orig
+cd plugins/ml2
+cp ml2_conf.ini ml2_conf.ini.orig
+cd /etc/neutron
+
+copy neutron.conf and ml2_conf.ini from control node
+
+To configure the Layer-3 (L3) agent
+
+cp l3_agent.ini l3_agent.ini.orig
+edit l3_agent.ini
+[DEFAULT]
+interface_driver = neutron.agent.linux.interface.OVSInterfaceDriver
+use_namespaces = True
+external_network_bridge = br-ex
+
+cp dhcp_agent.ini  dhcp_agent.ini.orig
+edit dhcp_agent.ini
+
+
+[DEFAULT]
+interface_driver = neutron.agent.linux.interface.OVSInterfaceDriver
+dhcp_driver = neutron.agent.linux.dhcp.Dnsmasq
+
+
+ cp metadata_agent.ini metadata_agent.ini.orig
+ edit metadata_agent.ini
+
+ [DEFAULT]
+auth_url = http://10.10.1.2:5000/v2.0
+auth_region = RegionOne
+admin_tenant_name = service
+admin_user = neutron
+admin_password = service_pass
+nova_metadata_ip = 10.10.1.2
+nova_metadata_port = 8775
+metadata_proxy_shared_secret = metasecret13
+
+
+
+
+Restart the OVS service:
+
+# service openvswitch-switch restart
+Add the integration bridge:
+
+# ovs-vsctl add-br br-int
+Add the external bridge:
+
+# ovs-vsctl add-br br-ex
+Add a port to the external bridge that connects to the physical external network interface (eth2):
+
+# ovs-vsctl add-port br-ex eth3
+cd /etc/init/; for i in $(ls -1 neutron-* | cut -d \. -f 1); do sudo service $i restart; done
+
+
+cd /etc/init/; for i in $(ls -1 neutron-* | cut -d \. -f 1); do sudo service $i restart; done
+
+
 Compute
 
 
