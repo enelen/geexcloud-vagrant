@@ -333,4 +333,96 @@ cd /etc/init/; for i in $(ls -1 neutron-* | cut -d \. -f 1); do sudo service $i 
 
 Compute
 
+apt-get update
+apt-get dist-upgrade -y
+reboot
+
+
+apt-get install vim nova-compute-kvm
+
+cd /etc/nova
+cp nova.conf nova.conf.orig
+copy nova.conf from control
+cp api-paste.ini api-paste.ini.orig
+copy api-paste.ini from control
+cp nova-compute.conf nova-compute.conf.orig
+
+
+vim nova-compute.conf with:
+
+[DEFAULT]
+compute_driver=libvirt.LibvirtDriver
+[libvirt]
+virt_type=qemu
+
+Edit /etc/sysctl.conf to contain the following:
+
+net.ipv4.conf.all.rp_filter=0
+net.ipv4.conf.default.rp_filter=0
+Implement the changes:
+
+# sysctl -p
+
+apt-get install neutron-common neutron-plugin-ml2 neutron-plugin-openvswitch-agent
+
+
+cd /etc/neutron
+cp neutron.conf neutron.conf.orig
+copy neutron.conf from neutron node
+
+cp plugins/ml2/ml2_conf.ini plugins/ml2/ml2_conf.ini.orig
+copy ml2_conf.ini  from neutron
+
+To configure the Open vSwitch (OVS) service
+
+The OVS service provides the underlying virtual networking framework for instances. The integration bridge br-int handles internal instance network traffic within OVS.
+
+Restart the OVS service:
+
+# service openvswitch-switch restart
+Add the integration bridge:
+
+# ovs-vsctl add-br br-int
+
+service neutron-plugin-openvswitch-agent restart
+
+
+
+
+on control node
+
+. openrc
+
+keystone tenant-create --name project_one
+
+keystone user-create --name=user_one --pass=user_one --tenant-id $put_id_of_project_one --email=user_one@domain.com
+
+keystone user-role-add --tenant-id $put_id_of_project_one  --user-id $put_id_of_user_one --role-id $put_id_of_member_role
+
+neutron net-create --tenant-id $put_id_of_project_one net_proj_one
+
+neutron subnet-create --tenant-id $put_id_of_project_one net_proj_one 10.128.0.0/24 --dns_nameservers list=true 8.8.8.8
+
+neutron router-create --tenant-id $put_id_of_project_one router_proj_one
+
+neutron agent-list (to get the l3 agent ID)
+neutron l3-agent-router-add $l3_agent_ID router_proj_one
+
+neutron router-interface-add $put_router_proj_one_id_here $put_subnet_id_here
+
+keystone tenant-list | grep admin
+Create an external network with the tenant id belonging to the admin tenant (keystone tenant-list to get the appropriate id):
+
+neutron net-create --tenant-id $put_id_of_admin_tenant ext_net --router:external=True
+
+
+Create a subnet for floating IPs:
+
+
+neutron subnet-create --tenant-id 8a2bace4d6b44f1f9217230467e5c24c --allocation-pool start=10.12.1.50,end=10.12.1.100 --gateway 10.12.1.3 ext_net 10.12.0.0/16 --enable_dhcp=False
+
+
+
+
+
 
