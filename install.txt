@@ -421,8 +421,43 @@ Create a subnet for floating IPs:
 
 neutron subnet-create --tenant-id 8a2bace4d6b44f1f9217230467e5c24c --allocation-pool start=10.12.1.50,end=10.12.1.100 --gateway 10.12.1.3 ext_net 10.12.0.0/16 --enable_dhcp=False
 
+neutron router-gateway-set $put_router_proj_one_id_here $put_id_of_ext_net_here
+
+
+
+vim onerc
+
+export OS_TENANT_NAME=project_one
+export OS_USERNAME=user_one
+export OS_PASSWORD=user_one
+export OS_AUTH_URL="http://10.10.1.2:5000/v2.0/"
+
+. onerc
+
+ssh-keygen -t rsa
+nova keypair-add --pub_key ~/.ssh/id_rsa.pub mykey
+
+nova secgroup-add-rule default icmp -1 -1 0.0.0.0/0
+nova secgroup-add-rule default tcp 22 22 0.0.0.0/0
+
+glance image-list
+
+wget http://cloud-images.ubuntu.com/trusty/current/trusty-server-cloudimg-amd64-disk1.img
+
+
+
+glance image-create --is-public true --disk-format qcow2 --container-format bare --name "Ubuntu 14.04 LTS - Trusty Tahr - 64" --file trusty-server-cloudimg-amd64-disk1.img 
+
+ nova boot --image f6ff109c-2522-4c37-8692-3b10a4909e21 --key-name mykey --flavor 1 ubuntu-1
 
 
 
 
 
+ Install the dashboard
+
+ # apt-get install apache2 memcached libapache2-mod-wsgi openstack-dashboard
+
+ # apt-get remove --purge openstack-dashboard-ubuntu-theme
+
+ 
